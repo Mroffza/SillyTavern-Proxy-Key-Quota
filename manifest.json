@@ -1,0 +1,13 @@
+{
+    "display_name": "Proxy Key Quota Counter",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Mroffza",
+    "version": "1.0.0",
+    "homePage": "https://github.com/Mroffza/SillyTavern-Proxy-Key-Quota",
+    "auto_update": false,
+    "manifest_version": 3
+}

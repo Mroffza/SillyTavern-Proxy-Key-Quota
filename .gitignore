@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local exports / dumps
+proxy-key-quota.json
+*.log
+
+# Node (not used, but keep clean if tooling is ever added)
+node_modules/
