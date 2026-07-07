@@ -194,8 +194,19 @@ function tryCount() {
     countMessage();
 }
 
-function onGenerationEnded() { tryCount(); }
+// The ONLY counting trigger. MESSAGE_RECEIVED fires when a reply actually
+// arrives — for both streaming and non-streaming, including empty (200)
+// responses. It does NOT fire when the user presses Stop / aborts, because
+// the request is cancelled before any message is produced. That's exactly
+// the behaviour we want: cancelled generations must not consume a count.
 function onMessageReceived() { tryCount(); }
+
+// User pressed Stop (or generation was aborted). Disarm so nothing counts.
+// (Belt-and-suspenders: MESSAGE_RECEIVED won't fire on abort anyway.)
+function onGenerationStopped() {
+    armed = false;
+    countedThisGen = false;
+}
 
 // ---- UI helpers ---------------------------------------------------------
 
@@ -733,8 +744,11 @@ function addSettingsPanel() {
     refreshUI();
 
     eventSource.on(event_types.GENERATION_STARTED, onGenerationStarted);
-    eventSource.on(event_types.GENERATION_ENDED, onGenerationEnded);
+    // Count only when a reply actually arrives. Do NOT listen to
+    // GENERATION_ENDED — that also fires when the user presses Stop, which
+    // would wrongly count a cancelled request.
     eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
+    eventSource.on(event_types.GENERATION_STOPPED, onGenerationStopped);
 
     eventSource.on(event_types.SETTINGS_UPDATED, refreshUI);
     eventSource.on(event_types.CHAT_CHANGED, refreshWidget);
