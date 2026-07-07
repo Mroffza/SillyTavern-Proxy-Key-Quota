@@ -1,56 +1,56 @@
 # SillyTavern Proxy Key Quota
 
-A third-party [SillyTavern](https://github.com/SillyTavern/SillyTavern) extension that counts how many messages each API key / proxy has received, tracks which model was used, and keeps a timestamped history — all client-side, no external calls.
+Extension เสริมสำหรับ [SillyTavern](https://github.com/SillyTavern/SillyTavern) ที่คอยนับว่าแต่ละ API key / proxy ได้รับข้อความไปแล้วกี่ครั้ง เก็บชื่อโมเดลที่ใช้ และบันทึกประวัติพร้อมเวลา — ทำงานฝั่ง client ทั้งหมด ไม่มีการส่งข้อมูลออกไปที่ไหน
 
-Built for the case where you rotate between several saved API keys (or reverse-proxy presets) and want to know how much each one has been used.
+เหมาะกับคนที่สลับใช้หลาย ๆ คีย์ (หรือหลาย reverse-proxy preset) แล้วอยากรู้ว่าแต่ละคีย์ถูกใช้ไปเท่าไหร่แล้ว
 
-## Features
+## ฟีเจอร์
 
-- **Counts every received message** — fires once per generation, covering both streaming and non-streaming responses (empty responses included). No double-counting.
-- **Per-key tracking** — automatically identifies the key currently in use, in priority order:
-  1. The active saved secret (the "Custom API Key" you selected in SillyTavern, by its label)
-  2. The reverse-proxy password (hashed — the raw secret is never stored)
-  3. The proxy preset name, then the proxy URL
-- **Per-model breakdown** — records the model name used for each message, so you can see how a key's usage splits across models.
-- **Timestamped history log** — every count is logged with a full 24-hour timestamp and the model used. Shows 10 rows by default, adjustable up to 1000.
-- **On-screen counter** — a draggable badge that shows only the *currently selected* key's count. Works on both desktop and mobile (touch drag). Position is remembered.
-- **"View all keys" page** — browse every key ever used via a dropdown / prev-next arrows, one card at a time (defaults to the key in use). Each card shows totals, latest model, per-model breakdown, and the history log, with a per-key delete button.
-- **Enable / disable toggle** — from the settings panel or the extensions "wand" menu.
-- **Export JSON** — dump all counters for backup or external processing.
+- **นับทุกข้อความที่ได้รับ** — นับ 1 ครั้งต่อ 1 การเจน รองรับทั้งแบบ streaming และไม่ streaming (รวมถึงข้อความว่าง) ไม่นับซ้ำ
+- **แยกนับตามคีย์** — ระบุคีย์ที่กำลังใช้อยู่โดยอัตโนมัติ ตามลำดับความสำคัญ:
+  1. คีย์ที่บันทึกไว้และกำลัง active (ช่อง "Custom API Key" ที่คุณเลือกใน SillyTavern อ้างอิงจาก label)
+  2. รหัสผ่าน reverse-proxy (เก็บแบบ hash — ไม่เก็บค่าดิบ)
+  3. ชื่อ proxy preset แล้วตามด้วย URL ของ proxy
+- **แยกยอดตามโมเดล** — บันทึกชื่อโมเดลที่ใช้ทุกครั้ง ทำให้เห็นว่าคีย์นี้ถูกใช้กับโมเดลไหนไปเท่าไหร่
+- **ประวัติพร้อมเวลา (log)** — ทุกครั้งที่นับจะบันทึกเวลาแบบ 24 ชั่วโมงและชื่อโมเดล แสดงเริ่มต้น 10 รายการ ปรับได้สูงสุด 1000
+- **ตัวนับบนหน้าจอ** — badge ที่ลากย้ายได้ แสดงเฉพาะยอดของคีย์ที่เลือกอยู่ ใช้ได้ทั้งบน desktop และมือถือ (ลากด้วยนิ้ว) และจำตำแหน่งไว้
+- **หน้า "ดูคีย์ทั้งหมด"** — เปิดดูทุกคีย์ที่เคยใช้ ทีละใบผ่าน dropdown / ปุ่มลูกศรก่อนหน้า-ถัดไป (เริ่มที่คีย์ที่ใช้อยู่) แต่ละใบแสดงยอดรวม โมเดลล่าสุด ยอดแยกตามโมเดล และประวัติ พร้อมปุ่มลบรายคีย์
+- **ปุ่มเปิด/ปิด** — จากหน้า settings หรือปุ่มในเมนู extensions (ไอคอนไม้กายสิทธิ์)
+- **Export JSON** — ดึงข้อมูลตัวนับทั้งหมดออกมาเพื่อสำรองหรือนำไปใช้ต่อ
 
-## Installation
+## การติดตั้ง
 
-1. In SillyTavern, open **Extensions** → **Install extension**.
-2. Paste this repository URL:
+1. ใน SillyTavern เปิด **Extensions** → **Install extension**
+2. วาง URL ของ repository นี้:
    ```
    https://github.com/Mroffza/SillyTavern-Proxy-Key-Quota
    ```
-3. Install, then refresh (Ctrl+F5).
+3. กดติดตั้ง แล้วรีเฟรช (Ctrl+F5)
 
-Or install manually by cloning into your extensions folder:
+หรือติดตั้งเองด้วยการ clone เข้าไปในโฟลเดอร์ extensions:
 
 ```bash
 git clone https://github.com/Mroffza/SillyTavern-Proxy-Key-Quota \
   <SillyTavern>/public/scripts/extensions/third-party/proxy-key-quota
 ```
 
-## Usage
+## วิธีใช้
 
-After installing, a small counter badge appears on the chat screen showing the current key's total. Send a message and the number ticks up.
+หลังติดตั้ง จะมี badge ตัวนับเล็ก ๆ โผล่บนหน้าจอแชท แสดงยอดรวมของคีย์ปัจจุบัน ลองส่งข้อความแล้วตัวเลขจะเดินขึ้น
 
-- Open the **Proxy Key Quota** panel under Extensions settings for the current-key summary and options.
-- Click **ดูคีย์ทั้งหมด / View all keys** to browse every tracked key, see per-model stats, and view / trim the history log.
-- Toggle counting on/off from the panel checkbox or the wand-menu button.
-- Drag the on-screen badge anywhere; use **Reset widget position** to bring it back to the corner.
+- เปิดแผง **Proxy Key Quota** ในหน้า Extensions settings เพื่อดูสรุปคีย์ปัจจุบันและตั้งค่าต่าง ๆ
+- กด **ดูคีย์ทั้งหมด** เพื่อไล่ดูทุกคีย์ที่นับไว้ ดูสถิติแยกตามโมเดล และดู/ตัดประวัติ
+- เปิด/ปิดการนับได้จาก checkbox ในแผง หรือปุ่มในเมนู wand
+- ลาก badge ไปวางตรงไหนก็ได้ ใช้ปุ่ม **รีเซ็ตตำแหน่ง widget** เพื่อดึงกลับมุมเดิม
 
-## How counting works
+## หลักการนับ
 
-The extension listens for SillyTavern's `GENERATION_ENDED` and `MESSAGE_RECEIVED` events and counts a single message per generation using whichever fires first (a guard flag prevents streaming from counting twice). Dry runs (prompt assembly only) are skipped. Background / quiet generations are skipped by default but can be enabled.
+Extension จะฟัง event `GENERATION_ENDED` และ `MESSAGE_RECEIVED` ของ SillyTavern แล้วนับ 1 ข้อความต่อ 1 การเจน โดยใช้ตัวที่ยิงก่อน (มี flag กันไม่ให้ streaming นับซ้ำ) การเจนแบบ dry run (แค่ประกอบ prompt) จะถูกข้าม ส่วน background / quiet generation จะถูกข้ามโดยค่าเริ่มต้น แต่เปิดให้นับได้
 
-## Limitations
+## ข้อจำกัด
 
-This counts on the **client side** of *this* SillyTavern instance. It reflects messages sent through this browser only — it is not a server-side quota meter. If you need exact accounting across multiple users or devices sharing the same key/proxy, instrument the proxy or server itself. This extension is best for a single user keeping tabs on their own key rotation.
+ตัวนี้นับที่ **ฝั่ง client** ของ SillyTavern เครื่องนี้ สะท้อนเฉพาะข้อความที่ส่งผ่านเบราว์เซอร์นี้เท่านั้น ไม่ใช่มิเตอร์นับโควต้าฝั่งเซิร์ฟเวอร์ ถ้าต้องการนับให้เป๊ะข้ามหลายผู้ใช้หรือหลายเครื่องที่แชร์คีย์/พร็อกซีเดียวกัน ต้องไปวัดที่ตัว proxy หรือเซิร์ฟเวอร์เอง extension นี้เหมาะกับผู้ใช้คนเดียวที่อยากติดตามการสลับคีย์ของตัวเอง
 
 ## License
 
-[GNU AGPL v3.0](LICENSE) — same license as SillyTavern itself.
+[GNU AGPL v3.0](LICENSE) — เป็น license เดียวกับ SillyTavern
