@@ -21,6 +21,7 @@ import {
     event_types,
     saveSettingsDebounced,
     main_api,
+    isStreamingEnabled,
 } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { oai_settings, selected_proxy, getChatCompletionModel } from '../../../openai.js';
@@ -59,12 +60,19 @@ const defaultSettings = {
     keys: {},
 };
 
-// Per-generation state. Armed on a real (non-dry) GENERATION_STARTED,
-// consumed exactly once by whichever end-signal fires first
-// (GENERATION_ENDED for streaming, or MESSAGE_RECEIVED for non-streaming).
+// Per-generation state. Armed on a real (non-dry) GENERATION_STARTED, and
+// counted only once the AI's turn actually starts producing output:
+//   - Streaming ON:  count on the FIRST streamed token/chunk — i.e. when the
+//                    AI turn appears and content begins flowing. After that,
+//                    stop / error / model hang all still count (quota spent).
+//                    If it aborts/errors BEFORE any token (no turn), no count.
+//   - Streaming OFF: count when the reply arrives (MESSAGE_RECEIVED), which is
+//                    when the turn appears all at once. Aborting while it
+//                    "thinks" and pre-reply errors do NOT count.
 let armed = false;
 let countedThisGen = false;
 let lastGenType = null;
+let streamingThisGen = false;
 
 function getSettings() {
     if (extension_settings[MODULE] === undefined) {
@@ -178,10 +186,19 @@ function onGenerationStarted(type, _options, dryRun) {
     lastGenType = type || 'normal';
     armed = true;
     countedThisGen = false;
+
+    // Detect streaming for THIS generation. In streaming mode we wait for the
+    // first token (onStreamToken); in non-streaming mode we wait for the reply
+    // (onMessageReceived). Either way we count only once a turn has begun.
+    try {
+        streamingThisGen = !!isStreamingEnabled();
+    } catch {
+        streamingThisGen = false;
+    }
 }
 
-// Count exactly once per armed generation. Whichever end-signal fires first
-// wins; the flag prevents streaming (both events fire) from double-counting.
+// Count exactly once per armed generation. The countedThisGen flag makes this
+// idempotent, so calling it from multiple signals is safe.
 function tryCount() {
     if (!armed || countedThisGen) return;
     const settings = getSettings();
@@ -194,18 +211,29 @@ function tryCount() {
     countMessage();
 }
 
-// The ONLY counting trigger. MESSAGE_RECEIVED fires when a reply actually
-// arrives — for both streaming and non-streaming, including empty (200)
-// responses. It does NOT fire when the user presses Stop / aborts, because
-// the request is cancelled before any message is produced. That's exactly
-// the behaviour we want: cancelled generations must not consume a count.
+// Streaming counting trigger. Fires on the first streamed token — the moment
+// the AI turn appears and content starts flowing, so the request has really
+// been served and quota is spent. Once counted, a later stop / error / model
+// hang keeps the count (countedThisGen makes this idempotent). If generation
+// aborts or errors BEFORE the first token, this never fires → no count.
+function onStreamToken() {
+    if (!streamingThisGen) return;
+    tryCount();
+}
+
+// Non-streaming counting trigger. MESSAGE_RECEIVED fires only when a reply
+// actually arrives (including empty 200 responses) and NOT when the user
+// aborts before a reply or the request errors pre-reply — so non-streaming
+// only counts real replies. In streaming mode the token already counted, so
+// countedThisGen makes this a no-op.
 function onMessageReceived() { tryCount(); }
 
-// User pressed Stop (or generation was aborted). Disarm so nothing counts.
-// (Belt-and-suspenders: MESSAGE_RECEIVED won't fire on abort anyway.)
+// User pressed Stop / generation aborted. If a token already streamed (turn
+// started) we've counted and keep it. If nothing streamed yet, disarm so the
+// aborted/half-started generation never counts.
 function onGenerationStopped() {
+    if (countedThisGen) return;
     armed = false;
-    countedThisGen = false;
 }
 
 // ---- UI helpers ---------------------------------------------------------
@@ -744,9 +772,11 @@ function addSettingsPanel() {
     refreshUI();
 
     eventSource.on(event_types.GENERATION_STARTED, onGenerationStarted);
-    // Count only when a reply actually arrives. Do NOT listen to
-    // GENERATION_ENDED — that also fires when the user presses Stop, which
-    // would wrongly count a cancelled request.
+    // Streaming: count on the first token (AI turn started producing output).
+    eventSource.on(event_types.STREAM_TOKEN_RECEIVED, onStreamToken);
+    // Non-streaming: count when the reply arrives. Do NOT listen to
+    // GENERATION_ENDED — it also fires when the user presses Stop, which would
+    // wrongly count a cancelled request that never produced a turn.
     eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
     eventSource.on(event_types.GENERATION_STOPPED, onGenerationStopped);
 
