@@ -45,7 +45,10 @@ const LOG_CAP = 1000;
 
 const defaultSettings = {
     enabled: true,
-    countQuiet: false,
+    // Count background/quiet generations by default — they still consume the
+    // key's quota (summarize, auto-title, impersonate, etc.), so the total
+    // reflects real API usage of the key.
+    countQuiet: true,
     showWidget: true,
     // Widget position (px). null => default top-right.
     widgetX: null,
@@ -671,9 +674,10 @@ function addSettingsPanel() {
     const widgetLabel = mkCheck(settings.showWidget, 'แสดงตัวนับบนหน้าจอหลัก', (v) => {
         settings.showWidget = v; saveSettingsDebounced(); refreshWidget();
     });
-    const quietLabel = mkCheck(settings.countQuiet, 'นับ background/quiet generation ด้วย', (v) => {
+    const quietLabel = mkCheck(settings.countQuiet, 'นับ background/quiet generation ด้วย (แนะนำ)', (v) => {
         settings.countQuiet = v; saveSettingsDebounced();
     });
+    quietLabel.title = 'งานเบื้องหลัง เช่น สรุปเรื่อง (summarize), ตั้งชื่อแชทอัตโนมัติ, impersonate ก็ยิง request กินโควต้าคีย์เหมือนกัน — เปิดไว้เพื่อให้ยอดตรงกับการใช้งานจริงของคีย์';
 
     const btnRow = document.createElement('div');
     btnRow.classList.add('pkq_btnrow');
@@ -702,6 +706,7 @@ function addSettingsPanel() {
         'ตัวนับบนหน้าจอแสดงเฉพาะคีย์ที่เลือกอยู่ สลับคีย์แล้วตัวเลขเปลี่ยนตาม',
         'กด "ดูคีย์ทั้งหมด" เพื่อเปิดหน้าคีย์ (เริ่มที่คีย์ที่ใช้อยู่) แล้วใช้ลูกศร/dropdown สลับดูคีย์อื่น พร้อมยอดแยกตามโมเดลและปุ่มลบ',
         'แต่ละคีย์เก็บประวัติ (log) เวลาและโมเดลทุกครั้ง แสดงเริ่มต้น 10 รายการ ปรับได้ถึง 1000',
+        'นับงานเบื้องหลัง (summarize, ตั้งชื่อแชทอัตโนมัติ ฯลฯ) ด้วยโดยค่าเริ่มต้น เพราะมันก็กินโควต้าคีย์จริง — ปิดได้ถ้าอยากนับเฉพาะข้อความที่คุยเอง',
         'ตัวนับลากย้ายได้ทั้ง desktop และมือถือ',
         'เปิด/ปิดจากปุ่มในเมนู extensions (ไอคอนไม้กายสิทธิ์)',
     ];

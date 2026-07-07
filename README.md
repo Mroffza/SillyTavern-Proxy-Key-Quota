@@ -45,7 +45,9 @@ git clone https://github.com/Mroffza/SillyTavern-Proxy-Key-Quota \
 
 ## หลักการนับ
 
-Extension จะฟัง event `GENERATION_ENDED` และ `MESSAGE_RECEIVED` ของ SillyTavern แล้วนับ 1 ข้อความต่อ 1 การเจน โดยใช้ตัวที่ยิงก่อน (มี flag กันไม่ให้ streaming นับซ้ำ) การเจนแบบ dry run (แค่ประกอบ prompt) จะถูกข้าม ส่วน background / quiet generation จะถูกข้ามโดยค่าเริ่มต้น แต่เปิดให้นับได้
+Extension จะฟัง event `GENERATION_ENDED` และ `MESSAGE_RECEIVED` ของ SillyTavern แล้วนับ 1 ข้อความต่อ 1 การเจน โดยใช้ตัวที่ยิงก่อน (มี flag กันไม่ให้ streaming นับซ้ำ) การเจนแบบ dry run (แค่ประกอบ prompt) จะถูกข้าม
+
+**งานเบื้องหลัง (background / quiet generation)** เช่น การสรุปเรื่อง (summarize/memory), ตั้งชื่อแชทอัตโนมัติ, impersonate — พวกนี้ก็ยิง request ไปที่ API และกินโควต้าของคีย์จริง ๆ จึงถูก**นับรวมโดยค่าเริ่มต้น** เพื่อให้ยอดตรงกับการใช้งานจริงของคีย์ ถ้าอยากนับเฉพาะข้อความที่คุณคุยเอง สามารถปิดตัวเลือกนี้ได้ในแผงตั้งค่า
 
 ## ข้อจำกัด
 
