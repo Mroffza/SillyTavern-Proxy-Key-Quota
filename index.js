@@ -60,15 +60,18 @@ const defaultSettings = {
     keys: {},
 };
 
-// Per-generation state. Armed on a real (non-dry) GENERATION_STARTED, and
-// counted only once the AI's turn actually starts producing output:
-//   - Streaming ON:  count on the FIRST streamed token/chunk — i.e. when the
-//                    AI turn appears and content begins flowing. After that,
-//                    stop / error / model hang all still count (quota spent).
-//                    If it aborts/errors BEFORE any token (no turn), no count.
-//   - Streaming OFF: count when the reply arrives (MESSAGE_RECEIVED), which is
-//                    when the turn appears all at once. Aborting while it
-//                    "thinks" and pre-reply errors do NOT count.
+// Per-generation state. Armed on a real (non-dry) GENERATION_STARTED.
+// The metric is "did this request consume the key/proxy's quota?", so the
+// trigger differs by mode:
+//   - Streaming ON:  count at DISPATCH (GENERATION_STARTED). The moment a
+//                    streaming request is sent, it has already hit the proxy
+//                    and quota is spent — regardless of whether any token
+//                    arrives. So stop / error / model hang / empty reply after
+//                    dispatch all still count. Do NOT wait for the first token.
+//   - Streaming OFF: count when the reply arrives (MESSAGE_RECEIVED). Nothing
+//                    traverses the proxy until the single response returns, so
+//                    aborting while it "thinks" and pre-reply errors do NOT
+//                    count.
 let armed = false;
 let countedThisGen = false;
 let lastGenType = null;
@@ -195,6 +198,14 @@ function onGenerationStarted(type, _options, dryRun) {
     } catch {
         streamingThisGen = false;
     }
+
+    // Streaming: the request has already been dispatched to the proxy the
+    // instant the stream opens, so quota is spent right now — count at
+    // dispatch, do NOT wait for the first token (a stream that opens then
+    // errors/hangs before any token still consumed quota).
+    if (streamingThisGen) {
+        tryCount();
+    }
 }
 
 // Count exactly once per armed generation. The countedThisGen flag makes this
@@ -211,11 +222,10 @@ function tryCount() {
     countMessage();
 }
 
-// Streaming counting trigger. Fires on the first streamed token — the moment
-// the AI turn appears and content starts flowing, so the request has really
-// been served and quota is spent. Once counted, a later stop / error / model
-// hang keeps the count (countedThisGen makes this idempotent). If generation
-// aborts or errors BEFORE the first token, this never fires → no count.
+// Streaming safety net. In streaming mode we already counted at dispatch
+// (onGenerationStarted). This is just a harmless idempotent backstop in case
+// a token somehow arrives without the dispatch-count having run; countedThisGen
+// makes it a no-op in the normal path.
 function onStreamToken() {
     if (!streamingThisGen) return;
     tryCount();
@@ -228,9 +238,9 @@ function onStreamToken() {
 // countedThisGen makes this a no-op.
 function onMessageReceived() { tryCount(); }
 
-// User pressed Stop / generation aborted. If a token already streamed (turn
-// started) we've counted and keep it. If nothing streamed yet, disarm so the
-// aborted/half-started generation never counts.
+// User pressed Stop / generation aborted. Streaming already counted at dispatch
+// (countedThisGen true) → keep it, the proxy was already hit. Non-streaming has
+// not counted yet → disarm so aborting while it "thinks" never counts.
 function onGenerationStopped() {
     if (countedThisGen) return;
     armed = false;
