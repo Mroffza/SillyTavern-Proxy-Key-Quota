@@ -12,3 +12,4 @@ proxy-key-quota.json
 
 # Node (not used, but keep clean if tooling is ever added)
 node_modules/
+discord-post.txt
